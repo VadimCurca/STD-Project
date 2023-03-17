@@ -101,7 +101,7 @@ def train_epoch(net, train_iter, loss, optimizer, device):
     return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
 
 
-def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = nn.CrossEntropyLoss()):
+def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = nn.CrossEntropyLoss(), evaluation_loss = nn.CrossEntropyLoss()):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
@@ -118,12 +118,11 @@ def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = n
         train_loss, train_acc = train_epoch(net, train_iter, loss, optimizer, device)
         train_loss_all.append(train_loss)
         train_acc_all.append(train_acc)
-                                                                # here
-        val_loss, val_acc = evaluate_accuracy(net, val_iter, nn.CrossEntropyLoss(), device)
+        val_loss, val_acc = evaluate_accuracy(net, val_iter, evaluation_loss, device)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
-    test_loss, test_acc = evaluate_accuracy(net, test_iter, nn.CrossEntropyLoss(), device)
+    test_loss, test_acc = evaluate_accuracy(net, test_iter, evaluation_loss, device)
     print(f'Test loss {test_loss:.2f}, Test accuracy {test_acc:.2f}')
 
     return train_loss_all, train_acc_all, val_loss_all, val_acc_all, test_acc, test_loss
