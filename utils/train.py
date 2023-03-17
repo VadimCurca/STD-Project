@@ -4,9 +4,11 @@ from torch.nn import functional as F
 import torchvision
 from torchvision import transforms
 import matplotlib.pyplot as plt
+import random as rnd
 
 torch.manual_seed(42)
 torch.backends.cudnn.deterministic = True
+
 
 def evaluate_accuracy(net, data_iter, loss, device):
     """Compute the accuracy for a model on a dataset."""
@@ -67,6 +69,7 @@ class DistilationLoss(torch.nn.Module):
         loss = base_loss * (1 - self.alpha) + distillation_loss * self.alpha
         return loss
 
+
 def train_epoch(net, train_iter, loss, optimizer, device):  
     # Set the model to training mode
     net.train()
@@ -96,6 +99,7 @@ def train_epoch(net, train_iter, loss, optimizer, device):
         total_samples += y.numel()
     # Return training loss and training accuracy
     return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
+
 
 def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = nn.CrossEntropyLoss()):
     """Train a model."""
@@ -152,3 +156,38 @@ def plot_accuracy(train_acc_all, val_acc_all):
     plt.ylabel('Accuracy') 
     plt.legend()
     plt.show()
+
+
+class TargetTransform():
+    def __init__(self, p):
+        self.p = p
+
+    def __call__(self, n):
+        if n > 0:
+            change_label = rnd.random() < self.p
+            n = (rnd.randint(0, 9) if change_label else n)
+
+        return n
+
+
+def load_data_fashion_mnist(batch_size, resize=None, error_rate=0.0):
+    """Download the Fashion-MNIST dataset and then load it into memory."""
+    trans = [transforms.ToTensor()]
+    if resize:
+        trans.insert(0, transforms.Resize(resize))
+    trans = transforms.Compose(trans)
+
+    target_transform = TargetTransform(error_rate)
+
+    mnist_train = torchvision.datasets.FashionMNIST(
+        root="../data", train=True, transform=trans, target_transform=target_transform, download=True)
+    mnist_test = torchvision.datasets.FashionMNIST(
+        root="../data", train=False, transform=trans, download=True)
+    mnist_train, mnist_val = torch.utils.data.random_split(mnist_train, [50000, 10000],
+                                                           generator=torch.Generator().manual_seed(42))
+    return (torch.utils.data.DataLoader(mnist_train, batch_size, shuffle=True,
+                            num_workers=0),
+            torch.utils.data.DataLoader(mnist_val, batch_size, shuffle=False,
+                            num_workers=0),
+            torch.utils.data.DataLoader(mnist_test, batch_size, shuffle=False,
+                            num_workers=2))
