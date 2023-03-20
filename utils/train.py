@@ -5,6 +5,7 @@ import torchvision
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import random as rnd
+from torch.utils.data import Dataset
 
 torch.manual_seed(42)
 torch.backends.cudnn.deterministic = True
@@ -169,6 +170,57 @@ class TargetTransform():
         return n
 
 
+def random_sample(n, num):
+    a = torch.zeros(n, dtype=torch.bool)
+
+    indices = rnd.sample(range(n), num)
+    for x in indices:
+        a[x] = True
+
+    return a
+
+
+class DatasetWrapper(Dataset):
+    def __init__(self, dataset, error_rate = 0.0):
+        self.dataset = dataset
+
+        n = len(dataset)
+        num = int(n * error_rate)
+        self.p = random_sample(n, num)
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        if self.p[index]:
+            newLabel = rnd.randint(0, 9)
+            img = self.dataset[index][0]
+            return img, newLabel
+
+        return self.dataset[index]
+
+
+def load_data_cifar10(batch_size, resize=None, error_rate=0.0):
+    """Download the Fashion-MNIST dataset and then load it into memory."""
+    trans = [transforms.ToTensor()]
+    if resize:
+        trans.insert(0, transforms.Resize(resize))
+    trans = transforms.Compose(trans)
+
+    mnist_train = DatasetWrapper(torchvision.datasets.CIFAR10(
+        root="../data", train=True, transform=trans, download=True), error_rate=error_rate)
+    mnist_test = DatasetWrapper(torchvision.datasets.CIFAR10(
+        root="../data", train=False, transform=trans, download=True))
+    mnist_train, mnist_val = torch.utils.data.random_split(mnist_train, [45000, 5000],
+                                                           generator=torch.Generator().manual_seed(42))
+    return (torch.utils.data.DataLoader(mnist_train, batch_size, shuffle=True,
+                            num_workers=0),
+            torch.utils.data.DataLoader(mnist_val, batch_size, shuffle=False,
+                            num_workers=0),
+            torch.utils.data.DataLoader(mnist_test, batch_size, shuffle=False,
+                            num_workers=2))
+
+
 def load_data_fashion_mnist(batch_size, resize=None, error_rate=0.0):
     """Download the Fashion-MNIST dataset and then load it into memory."""
     trans = [transforms.ToTensor()]
@@ -176,12 +228,10 @@ def load_data_fashion_mnist(batch_size, resize=None, error_rate=0.0):
         trans.insert(0, transforms.Resize(resize))
     trans = transforms.Compose(trans)
 
-    target_transform = TargetTransform(error_rate)
-
-    mnist_train = torchvision.datasets.FashionMNIST(
-        root="../data", train=True, transform=trans, target_transform=target_transform, download=True)
-    mnist_test = torchvision.datasets.FashionMNIST(
-        root="../data", train=False, transform=trans, download=True)
+    mnist_train = DatasetWrapper(torchvision.datasets.FashionMNIST(
+        root="../data", train=True, transform=trans, download=True), error_rate=error_rate)
+    mnist_test = DatasetWrapper(torchvision.datasets.FashionMNIST(
+        root="../data", train=False, transform=trans, download=True))
     mnist_train, mnist_val = torch.utils.data.random_split(mnist_train, [50000, 10000],
                                                            generator=torch.Generator().manual_seed(42))
     return (torch.utils.data.DataLoader(mnist_train, batch_size, shuffle=True,
