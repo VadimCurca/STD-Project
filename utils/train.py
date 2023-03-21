@@ -145,6 +145,17 @@ def save_model(name, model, epochs, optimizer, criterion):
                 }, root_dir + name + '.pth')
 
 
+def load_model(name):
+    print(f"Loading {name} model")
+
+    file = "checkpoints/" + name + ".pth"
+    if not Path(file).exists():
+        print(f"File {file} does not exist")
+        return None
+
+    return torch.load(file)
+
+
 class ModelSaver():
     def __init__(self, name, model, best_valid_loss=float('inf')):
         self.best_valid_loss = best_valid_loss
