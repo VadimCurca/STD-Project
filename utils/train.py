@@ -103,16 +103,25 @@ def train_epoch(net, train_iter, loss, optimizer, device):
     return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
 
 
-def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = nn.CrossEntropyLoss(), evaluation_loss = nn.CrossEntropyLoss()):
+def init_layer(m):
+    if type(m) == nn.Linear or type(m) == nn.Conv2d:
+        nn.init.xavier_uniform_(m.weight)
+
+
+def init_model(model):
+    model.apply(init_layer)
+
+
+def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = nn.CrossEntropyLoss(), evaluation_loss = nn.CrossEntropyLoss(), save_model = True):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
     val_loss_all = []
     val_acc_all = []
-    def init_weights(m):
-        if type(m) == nn.Linear or type(m) == nn.Conv2d:
-            nn.init.xavier_uniform_(m.weight)
-    net.apply(init_weights)
+
+    if save_model:
+        model_saver = ModelSaver(net.name, net)
+
     print('Training on', device)
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
@@ -124,8 +133,13 @@ def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = n
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
+        if save_model:
+            model_saver.save_best_model(val_loss, epoch, optimizer, loss)
     test_loss, test_acc = evaluate_accuracy(net, test_iter, evaluation_loss, device)
     print(f'Test loss {test_loss:.2f}, Test accuracy {test_acc:.2f}')
+
+    if save_model:
+        model_saver.save_last_model(num_epochs, optimizer, loss)
 
     return train_loss_all, train_acc_all, val_loss_all, val_acc_all, test_acc, test_loss
 
@@ -165,12 +179,9 @@ class ModelSaver():
     def save_best_model(self, current_valid_loss, epoch, optimizer, criterion):
         if current_valid_loss < self.best_valid_loss:
             self.best_valid_loss = current_valid_loss
-            print(f"\nBest validation loss: {self.best_valid_loss}")
-            print(f"\nSaving best model for epoch: {epoch+1}\n")
             save_model(self.name + '_best', self.model, epoch, optimizer, criterion)
 
     def save_last_model(self, epoch, optimizer, criterion):
-        print(f"\nSaving last model for epoch: {epoch+1}\n")
         save_model(self.name + '_last', self.model, epoch, optimizer, criterion)
 
 

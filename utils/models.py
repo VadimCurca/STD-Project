@@ -1,9 +1,14 @@
 from torch import nn
+import torchvision
+import torchvision.models as models
+from utils.train import *
+
 
 class LeNet(nn.Module):
-    def __init__(self, distilation):
+    def __init__(self, name = 'LeNet', distilation = False):
         super().__init__()
 
+        self.name = name
         self.distilation = distilation
 
         self.conv1      = nn.Conv2d(1, 6, kernel_size=5, padding=2) # nn.Sigmoid()
@@ -16,6 +21,8 @@ class LeNet(nn.Module):
 
         self.head = nn.Linear(84, 10)
         self.head_dist = nn.Linear(84, 10)
+
+        init_model(self)
 
     def forward(self, x):
         Y = self.conv1(x)
@@ -30,7 +37,6 @@ class LeNet(nn.Module):
         Y = self.linear2(Y)
         Y = nn.Sigmoid()(Y)
 
-
         if self.distilation:
             x = self.head(Y), self.head_dist(Y)
             if not self.training:
@@ -38,3 +44,4 @@ class LeNet(nn.Module):
         else:
             x = self.head(Y)
         return x
+
