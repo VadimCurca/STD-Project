@@ -6,6 +6,7 @@ from torchvision import transforms
 import matplotlib.pyplot as plt
 import random as rnd
 from torch.utils.data import Dataset
+from pathlib import Path
 
 torch.manual_seed(42)
 torch.backends.cudnn.deterministic = True
@@ -127,6 +128,39 @@ def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device, loss = n
     print(f'Test loss {test_loss:.2f}, Test accuracy {test_acc:.2f}')
 
     return train_loss_all, train_acc_all, val_loss_all, val_acc_all, test_acc, test_loss
+
+
+def save_model(name, model, epochs, optimizer, criterion):
+    """
+    Function to save the trained model to disk.
+    """
+    print(f"Saving {name} model")
+    root_dir = 'checkpoints/'
+    Path(root_dir).mkdir(exist_ok = True)
+    torch.save({
+                'epoch': epochs,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': criterion,
+                }, root_dir + name + '.pth')
+
+
+class ModelSaver():
+    def __init__(self, name, model, best_valid_loss=float('inf')):
+        self.best_valid_loss = best_valid_loss
+        self.name = name
+        self.model = model
+
+    def save_best_model(self, current_valid_loss, epoch, optimizer, criterion):
+        if current_valid_loss < self.best_valid_loss:
+            self.best_valid_loss = current_valid_loss
+            print(f"\nBest validation loss: {self.best_valid_loss}")
+            print(f"\nSaving best model for epoch: {epoch+1}\n")
+            save_model(self.name + '_best', self.model, epoch, optimizer, criterion)
+
+    def save_last_model(self, epoch, optimizer, criterion):
+        print(f"\nSaving last model for epoch: {epoch+1}\n")
+        save_model(self.name + '_last', self.model, epoch, optimizer, criterion)
 
 
 def try_gpu(i=0):
