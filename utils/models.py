@@ -45,3 +45,43 @@ class LeNet(nn.Module):
             x = self.head(Y)
         return x
 
+
+class CifarResNet(nn.Module):
+    def __init__(self, name = "CifarResNet") -> None:
+        super().__init__()
+
+        self.name = name
+        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_ftrs, 10)
+
+        init_layer(self.model.fc)
+
+    def forward(self, X):
+        if not X.size(dim=-1) == 224:
+            X = torchvision.transforms.Resize(224)(X)
+
+        return self.model(X)
+
+
+class FashionMnistResNet(nn.Module):
+    def __init__(self, name = "FashionMnistResNet") -> None:
+        super().__init__()
+
+        self.name = name
+        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+
+        self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_ftrs, 10)
+
+        init_layer(self.model.conv1)
+        init_layer(self.model.fc)
+
+    def forward(self, X):
+        if not X.size(dim=-1) == 224:
+            X = torchvision.transforms.Resize(224)(X)
+
+        return self.model(X)
+
