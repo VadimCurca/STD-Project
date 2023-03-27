@@ -66,18 +66,26 @@ class CifarResNet(nn.Module):
 
 
 class FashionMnistResNet(nn.Module):
-    def __init__(self, name = "FashionMnistResNet") -> None:
+    def __init__(self, name = "FashionMnistResNet", pretrained = True) -> None:
         super().__init__()
 
+        if pretrained:
+            weights = models.ResNet18_Weights.DEFAULT
+        else:
+            weights = None
+
         self.name = name
-        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        self.model = models.resnet18(weights=weights)
 
         self.model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Linear(num_ftrs, 10)
 
-        init_layer(self.model.conv1)
-        init_layer(self.model.fc)
+        if pretrained:
+            init_layer(self.model.conv1)
+            init_layer(self.model.fc)
+        else:
+            init_model(self)
 
     def forward(self, X):
         if not X.size(dim=-1) == 224:
