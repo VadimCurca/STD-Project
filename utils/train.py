@@ -150,7 +150,15 @@ def save_model(name, model, epochs, optimizer, criterion):
     """
     print(f"Saving {name} model")
     root_dir = 'checkpoints/'
+
+    try:
+        if google_colab:
+            root_dir = '/content/gdrive/My Drive/checkpoints/'
+    except NameError:
+        pass
+
     Path(root_dir).mkdir(exist_ok = True)
+
     torch.save({
                 'epoch': epochs,
                 'model_state_dict': model.state_dict(),
